@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>签到二维码 - [[${attendanceSession.title}]] - 二维码签到系统</title>
+  <!-- 引入公共样式CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <style>
+    /* 全局通用样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* 侧边栏样式 - 固定布局 */
+    .sidebar {
+      min-height: 100vh;
+      background: #2c3e50;
+      color: white;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200px;
+      z-index: 999;
+      overflow-y: auto;
+    }
+
+    .sidebar .sidebar-header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #34495e;
+    }
+
+    .sidebar .user-info {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #34495e;
+    }
+
+    .sidebar .nav-link {
+      color: #ecf0f1;
+      padding: 12px 20px;
+      display: block;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+      background: #34495e;
+      border-left-color: #3498db;
+    }
+
+    .sidebar .nav-link i {
+      margin-right: 8px;
+    }
+
+    /* 主内容区样式 */
+    .main-content {
+      margin-left: 200px;
+      padding: 25px;
+      background: #f8f9fa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 二维码卡片样式 */
+    .qr-card {
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      max-width: 800px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    /* 二维码容器样式 */
+    .qr-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      background: white;
+    }
+
+    #qrCode {
+      border: 10px solid white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    /* 签到信息样式 */
+    .session-info {
+      padding: 25px;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+    }
+
+    .session-info h5 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .info-item {
+      display: flex;
+      margin-bottom: 12px;
+    }
+
+    .info-item .label {
+      width: 100px;
+      font-weight: 500;
+      color: #6c757d;
+    }
+
+    .info-item .value {
+      flex: 1;
+      color: #2c3e50;
+    }
+
+    .attendance-code {
+      font-family: monospace;
+      letter-spacing: 2px;
+      font-weight: bold;
+      color: #0d6efd;
+      font-size: 1.1rem;
+    }
+
+    /* 状态标签样式 */
+    .status-badge {
+      font-size: 1rem;
+      padding: 6px 12px;
+    }
+
+    /* 操作按钮组 */
+    .action-group {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* 响应式适配 */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        min-height: auto;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 15px;
+        justify-content: flex-start;
+        margin-top: 20px;
+      }
+
+      .qr-card {
+        max-width: 100%;
+      }
+
+      .qr-container {
+        padding: 20px 10px;
+      }
+
+      #qrCode {
+        width: 250px !important;
+        height: 250px !important;
+      }
+
+      .session-info {
+        padding: 20px 15px;
+      }
+
+      .action-group {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+<input type="hidden" id="attendanceCode" th:value="${attendanceSession.attendanceCode}">
+<input type="hidden" id="sessionTitle" th:value="${attendanceSession.title}">
+<input type="hidden" id="sessionId" th:value="${attendanceSession.id}">
+<input type="hidden" id="sessionIsActive" th:value="${attendanceSession.status=='STARTED'}">
+<input type="hidden" id="startTime" th:value="${#temporals.format(attendanceSession.startTime, 'yyyy-MM-dd HH:mm')}">
+<input type="hidden" id="endTime" th:value="${#temporals.format(attendanceSession.endTime, 'yyyy-MM-dd HH:mm')}">
+<!-- 在现有隐藏域后添加 -->
+<input type="hidden" id="signInUrl" th:value="@{/student/sign-in(code=${attendanceSession.attendanceCode})}">
+<!-- 侧边栏 -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h4><i class="bi bi-qr-code me-2"></i>签到系统</h4>
+  </div>
+  <div class="user-info">
+    <i class="bi bi-person-circle fs-3 mb-2"></i>
+    <h6>教师</h6>
+    <p class="mb-1" th:text="${teacher.name}">张老师</p>
+    <small th:text="${teacher.username}">teacher1</small>
+  </div>
+  <nav class="nav flex-column">
+    <a th:href="@{/teacher/dashboard}" class="nav-link">
+      <i class="bi bi-speedometer2"></i> 仪表板
+    </a>
+    <a th:href="@{/teacher/teaching-classes}" class="nav-link">
+      <i class="bi bi-people"></i> 教学班管理
+    </a>
+    <a th:href="@{/teacher/attendance/sessions}" class="nav-link active">
+      <i class="bi bi-check-circle"></i> 签到管理
+    </a>
+    <div class="mt-4">
+      <a th:href="@{/logout}" class="nav-link text-danger">
+        <i class="bi bi-box-arrow-right"></i> 退出登录
+      </a>
+    </div>
+  </nav>
+</div>
+
+<!-- 主内容区 -->
+<div class="main-content">
+  <!-- 页面头部 -->
+  <div class="text-center mb-4 w-100">
+    <h3><i class="bi bi-qr-code-scan text-success me-2"></i> 签到二维码</h3>
+    <a th:href="@{/teacher/attendance/sessions/{id}/details(id=${attendanceSession.id})}"
+       class="text-decoration-none text-muted">
+      <i class="bi bi-arrow-left"></i> 返回签到详情
+    </a>
+  </div>
+
+  <!-- 二维码卡片 -->
+  <div class="card qr-card">
+    <!-- 二维码展示区 -->
+    <div class="qr-container">
+      <img th:src="|data:image/png;base64,${qrCodeBase64}|" style="width:300px;height:300px;border: 10px solid white;box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);border-radius: 8px;" />
+    </div>
+
+    <!-- 签到信息区 -->
+    <div class="session-info">
+      <h5 class="text-center">签到信息</h5>
+
+      <div class="info-item">
+        <div class="label">教学班：</div>
+        <div class="value">[[${attendanceSession.teachingClass !=null ? attendanceSession.teachingClass.className : '未关联班级'}]]</div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">签到标题：</div>
+        <div class="value">[[${attendanceSession.title}]]</div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">签到码：</div>
+        <div class="value">
+          <span class="attendance-code">[[${attendanceSession.attendanceCode}]]</span>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">开始时间：</div>
+        <div class="value">[[${#temporals.format(attendanceSession.startTime, 'yyyy-MM-dd HH:mm:ss')}]]</div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">结束时间：</div>
+        <div class="value">[[${#temporals.format(attendanceSession.endTime, 'yyyy-MM-dd HH:mm:ss')}]]</div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">当前状态：</div>
+        <div class="value">
+          <span th:if="${attendanceSession.status=='STARTED'}" class="badge bg-warning status-badge">进行中</span>
+          <span th:if="${attendanceSession.status ne 'STARTED'}" class="badge bg-secondary status-badge">已结束</span>
+        </div>
+      </div>
+
+        <a th:href="@{/teacher/attendance/sessions/{id}/details(id=${attendanceSession.id})}" class="btn btn-outline-info">
+          <i class="bi bi-eye"></i> 查看签到详情
+        </a>
+
+        <a th:href="@{/teacher/attendance/sessions/{id}/end(id=${attendanceSession.id})}"
+           class="btn btn-danger"
+           th:if="${attendanceSession.status=='STARTED'}"
+           onclick="return confirm('确定要结束这个签到吗？结束后学生将无法签到！')">
+          <i class="bi bi-stop-circle"></i> 结束签到
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 引入公共脚本CDN -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script>
+  // 页面加载完成后生成二维码
+  document.addEventListener('DOMContentLoaded', function() {
+    // 直接从隐藏域获取 Thymeleaf 生成的完整 URL
+    const signInUrl = document.getElementById('signInUrl').value;
+
+    // 生成二维码
+    QRCode.toCanvas(document.getElementById('qrCode'), signInUrl, {
+      width: 300,
+      margin: 1,
+      color: {
+        dark: '#000000', // 二维码颜色
+        light: '#ffffff'  // 背景色
+      }
+    }, function (error) {
+      if (error) {
+        console.error('二维码生成失败：', error);
+        document.getElementById('qrCode').innerHTML = '<p class="text-danger">二维码生成失败，请刷新页面重试</p>';
+      }
+    });
+  });
+
+  // 定时刷新二维码（防止签到状态过期）
+  window.onload = function() {
+    const sessionIsActive = document.getElementById('sessionIsActive').value === 'true';
+    const sessionId = document.getElementById('sessionId').value;
+
+    if (sessionIsActive) {
+      setInterval(function() {
+        fetch('teacher/attendance/sessions/' + sessionId + '/status')
+                .then(response => response.json())
+                .then(data => {
+                  if (!data.active) {
+                    window.location.reload();
+                  }
+                })
+                .catch(error => console.error('检查签到状态失败：', error));
+      }, 60000);
+    }
+  };
+</script>
+</body>
+</html>

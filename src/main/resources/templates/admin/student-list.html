@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理 - 二维码签到系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: #2c3e50;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: block;
+            border-left: 3px solid transparent;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background: #34495e;
+            border-left-color: #3498db;
+        }
+        .main-content {
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .search-box {
+            max-width: 300px;
+        }
+        .status-active {
+            color: #28a745;
+            font-weight: 600;
+        }
+        .status-inactive {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .status-graduated {
+            color: #6c757d;
+            font-weight: 600;
+        }
+        .filter-badge {
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .filter-badge.active {
+            background-color: #0d6efd !important;
+        }
+        .table-row-hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 p-0 sidebar">
+            <div class="p-3">
+                <h4 class="text-center mb-4">
+                    <i class="bi bi-qr-code"></i> 签到系统
+                </h4>
+                <div class="user-info text-center mb-4">
+                    <i class="bi bi-shield-lock fs-2 mb-2"></i>
+                    <h6>管理员</h6>
+                    <p class="mb-1" th:text="${admin.name}">系统管理员</p>
+                    <small th:text="${admin.username}">admin</small>
+                </div>
+
+                <nav class="nav flex-column">
+                    <a th:href="@{/admin/dashboard}" class="nav-link">
+                        <i class="bi bi-speedometer2"></i> 仪表板
+                    </a>
+                    <a th:href="@{/admin/teachers}" class="nav-link">
+                        <i class="bi bi-person-badge"></i> 教师管理
+                    </a>
+                    <a th:href="@{/admin/students}" class="nav-link active">
+                        <i class="bi bi-people"></i> 学生管理
+                    </a>
+                    <a th:href="@{/admin/departments}" class="nav-link">
+                        <i class="bi bi-building"></i> 院系管理
+                    </a>
+                    <div class="mt-4">
+                        <a th:href="@{/logout}" class="nav-link text-danger">
+                            <i class="bi bi-box-arrow-right"></i> 退出登录
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            <!-- 页面标题和操作按钮 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3><i class="bi bi-people"></i> 学生管理</h3>
+                <div>
+                    <a th:href="@{/admin/students/add}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> 添加学生
+                    </a>
+                    <a th:href="@{/admin/dashboard}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 返回
+                    </a>
+                </div>
+            </div>
+
+            <!-- 消息提示 -->
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="bi bi-exclamation-circle"></i>
+                <span th:text="${error}"></span>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success">
+                <i class="bi bi-check-circle"></i>
+                <span th:text="${success}"></span>
+            </div>
+
+            <!-- 搜索和筛选 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group search-box">
+                                <input type="text" class="form-control" placeholder="搜索学号、姓名、班级..." id="searchInput">
+                                <button class="btn btn-outline-primary" type="button" id="searchBtn">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" id="resetSearch">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <small class="text-muted">状态筛选：</small>
+                                <span class="badge bg-success filter-badge active" data-status="ALL">全部</span>
+                                <span class="badge bg-success filter-badge" data-status="ACTIVE">正常</span>
+                                <span class="badge bg-danger filter-badge" data-status="INACTIVE">停用</span>
+                                <span class="badge bg-secondary filter-badge" data-status="GRADUATED">已毕业</span>
+                            </div>
+                            <div>
+                                <small class="text-muted">院系筛选：</small>
+                                <!-- 修复1：院系下拉框绑定真实ID和名称，添加data-name属性 -->
+                                <select class="form-select form-select-sm d-inline-block w-auto" id="departmentFilter">
+                                    <option value="">所有院系</option>
+                                    <option th:each="dept : ${departments}"
+                                            th:value="${dept.id}"
+                                            th:text="${dept.name}"
+                                            th:data-name="${dept.name}">
+                                        计算机学院
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <h5 class="card-title">总人数</h5>
+                            <h2 th:text="${students.size()}">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <h5 class="card-title">正常</h5>
+                            <h2 th:text="${activeCount}">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-danger">
+                        <div class="card-body">
+                            <h5 class="card-title">停用</h5>
+                            <h2 th:text="${inactiveCount}">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">已毕业</h5>
+                            <h2 th:text="${graduatedCount}">0</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学生表格 -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="studentTable">
+                            <thead class="table-light">
+                            <tr>
+                                <th>选择</th>
+                                <th>学号</th>
+                                <th>姓名</th>
+                                <th>用户名</th>
+                                <th>院系</th>
+                                <th>班级</th>
+                                <th>入学年份</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- 修复2：学生行绑定双重标识 - ID和名称，兼容两种匹配方式 -->
+                            <tr th:each="student : ${students}"
+                                class="student-row"
+                                th:data-dept-id="${student.department != null ? student.department.id : ''}"
+                                th:data-dept-name="${student.department != null ? student.department.name : '未分配'}">
+                                <td>
+                                    <input type="checkbox" class="form-check-input student-select"
+                                           th:data-id="${student.id}"
+                                           th:value="${student.id}">
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary" th:text="${student.studentId}">20231001</span>
+                                </td>
+                                <td th:text="${student.name}">张三</td>
+                                <td th:text="${student.username}">s2023001</td>
+                                <td th:data-dept-id="${student.department != null ? student.department.id : ''}"
+                                    th:data-dept-name="${student.department != null ? student.department.name : '未分配'}">
+                                    <span th:if="${student.department}"
+                                          th:text="${student.department.name}">
+                                        计算机学院
+                                    </span>
+                                    <span th:unless="${student.department}" class="text-muted">
+                                        未分配
+                                    </span>
+                                </td>
+                                <td th:text="${student.className}">23计科1班</td>
+                                <td th:text="${student.enrollmentYear}">2023</td>
+                                <td>
+                                    <span th:if="${student.status == 'ACTIVE'}" class="status-active" th:data-status="${student.status}">
+                                        <i class="bi bi-check-circle"></i> 正常
+                                    </span>
+                                    <span th:if="${student.status == 'INACTIVE'}" class="status-inactive" th:data-status="${student.status}">
+                                        <i class="bi bi-x-circle"></i> 停用
+                                    </span>
+                                    <span th:if="${student.status == 'GRADUATED'}" class="status-graduated" th:data-status="${student.status}">
+                                        <i class="bi bi-mortarboard"></i> 已毕业
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a th:href="@{/admin/students/edit/{id}(id=${student.id})}"
+                                           class="btn btn-outline-primary" title="编辑">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button class="btn btn-outline-danger"
+                                                th:data-student-id="${student.id}"
+                                                th:data-student-name="${student.name}"
+                                                onclick="confirmDelete(this)"
+                                                title="删除">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                                                    data-bs-toggle="dropdown" title="更多操作">
+                                                <i class="bi bi-three-dots"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="javascript:void(0);"
+                                                       th:data-student-id="${student.id}"
+                                                       th:data-student-status="${student.status}"
+                                                       onclick="changeStatus(this)">
+                                                        <i class="bi bi-arrow-repeat"></i> 更改状态
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" th:href="@{/admin/students/records/{id}(id=${student.id})}">
+                                                        <i class="bi bi-clock-history"></i> 签到记录
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr id="emptyRow" class="table-row-hidden">
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="bi bi-search fs-1"></i>
+                                    <h5>未找到匹配的学生</h5>
+                                    <p>请尝试调整搜索条件</p>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(students)}" class="empty-data-row">
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="bi bi-people fs-1"></i>
+                                    <h5>暂无学生数据</h5>
+                                    <p>请点击"添加学生"按钮添加新的学生</p>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量操作 -->
+            <div class="mt-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="selectAll">
+                    <label class="form-check-label" for="selectAll">全选</label>
+                </div>
+                <button type="button" class="btn btn-outline-success btn-sm" id="batchActive">
+                    <i class="bi bi-check-circle"></i> 批量启用
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="batchInactive">
+                    <i class="bi bi-x-circle"></i> 批量停用
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="batchDelete" disabled>
+                    <i class="bi bi-trash"></i> 批量删除
+                </button>
+            </div>
+
+            <!-- 分页 -->
+            <nav class="mt-4" th:if="${students.size() > 0}">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#">共 [[${students.size()}]] 条记录</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger"></i> 确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除学生 <strong id="deleteStudentName"></strong> 吗？</p>
+                <p class="text-danger"><small>此操作不可恢复，请谨慎操作！</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">确认删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批量操作确认模态框 -->
+<div class="modal fade" id="batchOperationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="batchModalTitle"><i class="bi bi-exclamation-triangle text-warning"></i> 确认操作</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="batchModalMessage">您确定要执行此批量操作吗？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmBatchOperation">确认执行</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更改状态模态框 -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-arrow-repeat"></i> 更改学生状态</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="statusStudentId">
+                <div class="mb-3">
+                    <label class="form-label">选择新状态</label>
+                    <select class="form-select" id="newStatus">
+                        <option value="ACTIVE">正常</option>
+                        <option value="INACTIVE">停用</option>
+                        <option value="GRADUATED">已毕业</option>
+                    </select>
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    状态说明：
+                    <ul class="mb-0 mt-2">
+                        <li><strong>正常</strong>：学生可以正常登录和签到</li>
+                        <li><strong>停用</strong>：学生无法登录系统</li>
+                        <li><strong>已毕业</strong>：学生账号保留，但不再参与新课程</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusChange">确认更改</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 删除确认
+    let deleteStudentId = null;
+    let deleteStudentName = null;
+
+    function confirmDelete(btn) {
+        deleteStudentId = btn.dataset.studentId;
+        deleteStudentName = btn.dataset.studentName;
+
+        if (!/^\d+$/.test(deleteStudentId)) {
+            alert('操作失败：无效的学生ID');
+            return;
+        }
+
+        $('#deleteStudentName').text(deleteStudentName);
+        $('#deleteModal').modal('show');
+    }
+
+    $('#confirmDelete').click(function() {
+        if (deleteStudentId && /^\d+$/.test(deleteStudentId)) {
+            window.location.href = 'admin/students/delete/' + deleteStudentId;
+        }
+    });
+
+    // 更改状态
+    function changeStatus(btn) {
+        const studentId = btn.dataset.studentId;
+        const currentStatus = btn.dataset.studentStatus;
+
+        if (!/^\d+$/.test(studentId)) {
+            alert('操作失败：无效的学生ID');
+            return;
+        }
+
+        $('#statusStudentId').val(studentId);
+        $('#newStatus').val(currentStatus);
+        $('#statusModal').modal('show');
+    }
+
+    $('#confirmStatusChange').click(function() {
+        const studentId = $('#statusStudentId').val();
+        const newStatus = $('#newStatus').val();
+        const validStatuses = ['ACTIVE', 'INACTIVE', 'GRADUATED'];
+
+        if (studentId && /^\d+$/.test(studentId) && validStatuses.includes(newStatus)) {
+            window.location.href = 'admin/students/status/' + studentId + '?status=' + newStatus;
+        } else {
+            alert('操作失败：无效的参数');
+        }
+    });
+
+    // 搜索和筛选功能 - 核心修复：院系筛选逻辑重构
+    let currentStatusFilter = 'ALL';
+    let currentDepartmentFilter = '';
+    let currentDepartmentName = ''; // 新增：存储选中的院系名称
+    let currentSearchKeyword = '';
+
+    // 搜索功能
+    $('#searchBtn').click(function() {
+        currentSearchKeyword = $.trim($('#searchInput').val()).toLowerCase();
+        filterTable();
+    });
+
+    $('#resetSearch').click(function() {
+        $('#searchInput').val('');
+        currentSearchKeyword = '';
+        // 重置所有筛选条件
+        currentStatusFilter = 'ALL';
+        currentDepartmentFilter = '';
+        currentDepartmentName = '';
+        $('.filter-badge').removeClass('active');
+        $('.filter-badge[data-status="ALL"]').addClass('active');
+        $('#departmentFilter').val('');
+        filterTable();
+    });
+
+    $('#searchInput').keyup(function(event) {
+        if (event.keyCode === 13) {
+            currentSearchKeyword = $.trim($(this).val()).toLowerCase();
+            filterTable();
+        }
+    });
+
+    // 状态筛选
+    $('.filter-badge').click(function() {
+        $('.filter-badge').removeClass('active');
+        $(this).addClass('active');
+        currentStatusFilter = $(this).data('status');
+        filterTable();
+    });
+
+    // 院系筛选 - 修复3：同时获取ID和名称，双重匹配
+    $('#departmentFilter').change(function() {
+        currentDepartmentFilter = $(this).val();
+        // 获取选中院系的名称（兼容名称匹配）
+        const $selectedOption = $(this).find('option:selected');
+        currentDepartmentName = $selectedOption.data('name') || '';
+        filterTable();
+    });
+
+    // 表格筛选逻辑 - 彻底修复院系筛选
+    function filterTable() {
+        // 1. 获取所有学生行（排除空数据提示行）
+        const $studentRows = $('.student-row');
+        let visibleCount = 0;
+
+        // 2. 遍历所有学生行进行筛选
+        $studentRows.each(function() {
+            const $row = $(this);
+            let isVisible = true;
+
+            // 2.1 搜索关键词筛选（模糊匹配，忽略空格）
+            if (currentSearchKeyword) {
+                const rowText = $.trim($row.text()).toLowerCase().replace(/\s+/g, '');
+                const searchText = currentSearchKeyword.replace(/\s+/g, '');
+                if (rowText.indexOf(searchText) === -1) {
+                    isVisible = false;
+                }
+            }
+
+            // 2.2 状态筛选
+            if (currentStatusFilter !== 'ALL' && isVisible) {
+                const rowStatus = $row.find('td:eq(7) span').data('status');
+                if (rowStatus !== currentStatusFilter) {
+                    isVisible = false;
+                }
+            }
+
+            // 2.3 院系筛选 - 核心修复：ID+名称双重匹配，兼容所有场景
+            if (currentDepartmentFilter && isVisible) {
+                // 方式1：ID匹配（优先）
+                const rowDeptId = $row.data('dept-id') || '';
+                // 方式2：名称匹配（兼容ID匹配失败的情况）
+                const rowDeptName = ($row.data('dept-name') || '').toLowerCase().replace(/\s+/g, '');
+                const selectedDeptName = (currentDepartmentName || '').toLowerCase().replace(/\s+/g, '');
+
+                // 只要ID匹配 或 名称匹配，就视为符合条件
+                const isDeptMatch = (rowDeptId === currentDepartmentFilter) ||
+                    (rowDeptName === selectedDeptName && selectedDeptName);
+
+                if (!isDeptMatch) {
+                    isVisible = false;
+                }
+            }
+
+            // 3. 控制行显示/隐藏
+            if (isVisible) {
+                $row.show();
+                visibleCount++;
+            } else {
+                $row.hide();
+            }
+        });
+
+        // 4. 处理空结果显示
+        const $emptyRow = $('#emptyRow');
+        const $emptyDataRow = $('.empty-data-row');
+
+        // 有学生数据但无匹配结果
+        if ($studentRows.length > 0 && visibleCount === 0) {
+            $emptyRow.removeClass('table-row-hidden');
+            $emptyDataRow.addClass('table-row-hidden');
+        }
+        // 有匹配结果
+        else if (visibleCount > 0) {
+            $emptyRow.addClass('table-row-hidden');
+            $emptyDataRow.addClass('table-row-hidden');
+        }
+        // 无学生数据
+        else if ($studentRows.length === 0) {
+            $emptyRow.addClass('table-row-hidden');
+            $emptyDataRow.removeClass('table-row-hidden');
+        }
+
+        // 5. 更新批量操作按钮状态
+        updateBatchButtons();
+    }
+
+    // 全选功能 - 修复适配
+    $('#selectAll').change(function() {
+        const isChecked = $(this).prop('checked');
+        // 只选中可见的学生行的选择框
+        $('.student-row:visible').find('.student-select').prop('checked', isChecked).trigger('change');
+    });
+
+    // 单个选择框变化时更新批量按钮状态
+    $(document).on('change', '.student-select', function() {
+        updateBatchButtons();
+        // 更新全选框状态
+        const $visibleSelects = $('.student-row:visible').find('.student-select');
+        const $checkedSelects = $visibleSelects.filter(':checked');
+        $('#selectAll').prop('checked', $visibleSelects.length === $checkedSelects.length && $visibleSelects.length > 0);
+    });
+
+    // 更新批量操作按钮状态
+    function updateBatchButtons() {
+        const selectedCount = $('.student-select:checked').length;
+        $('#batchDelete').prop('disabled', selectedCount === 0);
+        $('#batchActive').prop('disabled', selectedCount === 0);
+        $('#batchInactive').prop('disabled', selectedCount === 0);
+    }
+
+    // 批量操作
+    let batchOperationType = '';
+
+    $('#batchActive').click(function() {
+        const selectedCount = $('.student-select:checked').length;
+        if (selectedCount > 0) {
+            batchOperationType = 'ACTIVE';
+            $('#batchModalTitle').html('<i class="bi bi-check-circle text-success"></i> 确认批量启用');
+            $('#batchModalMessage').text(`您确定要启用选中的 ${selectedCount} 名学生吗？`);
+            $('#batchOperationModal').modal('show');
+        }
+    });
+
+    $('#batchInactive').click(function() {
+        const selectedCount = $('.student-select:checked').length;
+        if (selectedCount > 0) {
+            batchOperationType = 'INACTIVE';
+            $('#batchModalTitle').html('<i class="bi bi-x-circle text-danger"></i> 确认批量停用');
+            $('#batchModalMessage').text(`您确定要停用选中的 ${selectedCount} 名学生吗？`);
+            $('#batchOperationModal').modal('show');
+        }
+    });
+
+    $('#batchDelete').click(function() {
+        const selectedCount = $('.student-select:checked').length;
+        if (selectedCount > 0) {
+            batchOperationType = 'DELETE';
+            $('#batchModalTitle').html('<i class="bi bi-trash text-danger"></i> 确认批量删除');
+            $('#batchModalMessage').text(`您确定要删除选中的 ${selectedCount} 名学生吗？此操作不可恢复！`);
+            $('#batchOperationModal').modal('show');
+        }
+    });
+
+    $('#confirmBatchOperation').click(function() {
+        const selectedIds = [];
+        $('.student-select:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) {
+            alert('没有选择任何学生');
+            return;
+        }
+
+        let url = '';
+        switch (batchOperationType) {
+            case 'ACTIVE':
+                url = 'admin/students/batch/status?status=ACTIVE&ids=' + selectedIds.join(',');
+                break;
+            case 'INACTIVE':
+                url = 'admin/students/batch/status?status=INACTIVE&ids=' + selectedIds.join(',');
+                break;
+            case 'DELETE':
+                url = 'admin/students/batch/delete?ids=' + selectedIds.join(',');
+                break;
+            default:
+                alert('无效的操作类型');
+                return;
+        }
+
+        $('#batchOperationModal').modal('hide');
+        window.location.href = url;
+    });
+
+    // 页面加载完成后初始化
+    $(document).ready(function() {
+        // 初始化院系筛选的名称（防止首次筛选为空）
+        const $defaultDeptOption = $('#departmentFilter option:selected');
+        currentDepartmentName = $defaultDeptOption.data('name') || '';
+        // 初始化筛选（强制显示所有学生）
+        currentSearchKeyword = '';
+        currentStatusFilter = 'ALL';
+        currentDepartmentFilter = '';
+        filterTable();
+    });
+</script>
+</body>
+</html>

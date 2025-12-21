@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码签到系统 - 登录</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 450px;
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .user-type-selector {
+            display: flex;
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+
+        .user-type {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .user-type.active {
+            background: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-type i {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .user-type.admin i {
+            color: #3498db;
+        }
+
+        .user-type.teacher i {
+            color: #e74c3c;
+        }
+
+        .user-type .type-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .user-type .type-desc {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 18px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px 15px 15px 50px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .form-group input:focus {
+            border-color: #3498db;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .system-info {
+            margin-top: 30px;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .login-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .login-footer a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .login-footer a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+        }
+
+        .password-toggle:hover {
+            color: #666;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 20px;
+                padding: 30px 25px;
+            }
+
+            .user-type {
+                padding: 12px 8px;
+            }
+
+            .user-type i {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-header">
+        <h1><i class="fas fa-qrcode"></i> 二维码签到系统</h1>
+        <p>请选择身份并输入账号信息登录</p>
+    </div>
+
+    <!-- 错误提示 -->
+    <div th:if="${error != null and error != ''}" class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span th:text="${error}">用户名或密码错误</span>
+    </div>
+
+    <!-- 退出成功提示 -->
+    <div th:if="${message != null and message != ''}" class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <span th:text="${message}">退出成功</span>
+    </div>
+
+    <div class="user-type-selector">
+        <div class="user-type admin active" onclick="selectUserType('admin')" id="adminType">
+            <i class="fas fa-user-shield"></i>
+            <div class="type-name">管理员</div>
+            <div class="type-desc">管理系统配置</div>
+        </div>
+        <div class="user-type teacher" onclick="selectUserType('teacher')" id="teacherType">
+            <i class="fas fa-chalkboard-teacher"></i>
+            <div class="type-name">教师</div>
+            <div class="type-desc">管理课程签到</div>
+        </div>
+    </div>
+
+    <form id="loginForm" th:action="@{/login}" method="post">
+        <input type="hidden" name="userType" id="userType" value="ADMIN">
+
+        <div class="form-group">
+            <i class="fas fa-user"></i>
+            <input type="text"
+                   id="username"
+                   name="username"
+                   placeholder="请输入用户名"
+                   required
+                   th:value="${username}"
+                   autocomplete="username">
+        </div>
+
+        <div class="form-group">
+            <i class="fas fa-lock"></i>
+            <input type="password"
+                   id="password"
+                   name="password"
+                   placeholder="请输入密码"
+                   required
+                   autocomplete="current-password">
+            <span class="password-toggle" onclick="togglePassword()">
+                    <i class="fas fa-eye" id="passwordToggle"></i>
+                </span>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+            <i class="fas fa-sign-in-alt"></i>
+            <span id="loginText">登录系统</span>
+        </button>
+
+    </form>
+
+    <div class="system-info">
+        <p><i class="fas fa-info-circle"></i> 二维码签到系统 v1.0</p>
+        <p>技术支持 &copy; 2025</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 用户类型选择
+    function selectUserType(type) {
+        const adminType = document.getElementById('adminType');
+        const teacherType = document.getElementById('teacherType');
+        const userTypeInput = document.getElementById('userType');
+
+        adminType.classList.remove('active');
+        teacherType.classList.remove('active');
+
+        if (type === 'admin') {
+            adminType.classList.add('active');
+            userTypeInput.value = 'ADMIN';
+            document.getElementById('username').placeholder = '请输入管理员用户名';
+        } else {
+            teacherType.classList.add('active');
+            userTypeInput.value = 'TEACHER';
+            document.getElementById('username').placeholder = '请输入教师工号/用户名';
+        }
+
+        // 动画效果
+        const loginContainer = document.querySelector('.login-container');
+        loginContainer.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+            loginContainer.style.transform = 'scale(1)';
+        }, 150);
+    }
+
+    // 显示/隐藏密码
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('passwordToggle');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
+
+    // 表单验证和提交
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const loginBtn = document.getElementById('loginBtn');
+        const loginText = document.getElementById('loginText');
+
+        // 基本验证
+        if (!username || !password) {
+            showError('请输入用户名和密码');
+            return false;
+        }
+
+        // 显示加载状态
+        loginBtn.disabled = true;
+        loginText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+
+        // 模拟网络延迟
+        setTimeout(() => {
+            // 实际提交表单
+            this.submit();
+
+            // 3秒后重置按钮状态（防止重复提交）
+            setTimeout(() => {
+                loginBtn.disabled = false;
+                loginText.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录系统';
+            }, 3000);
+        }, 1000);
+    });
+
+    // 显示错误消息
+    function showError(message) {
+        // 如果有现有的alert，先移除
+        const existingAlert = document.querySelector('.alert-error');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+
+        // 创建新的alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-error';
+        alertDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+
+        // 插入到header后面
+        const header = document.querySelector('.login-header');
+        header.parentNode.insertBefore(alertDiv, header.nextSibling);
+
+        // 3秒后自动消失
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.style.opacity = '0';
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 300);
+            }
+        }, 3000);
+    }
+
+    // 页面加载完成后的动画
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginContainer = document.querySelector('.login-container');
+        loginContainer.style.opacity = '0';
+        loginContainer.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            loginContainer.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            loginContainer.style.opacity = '1';
+            loginContainer.style.transform = 'translateY(0)';
+        }, 100);
+
+        // 自动聚焦到用户名输入框
+        document.getElementById('username').focus();
+
+        // 回车键提交
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.target.matches('.user-type')) {
+                const loginBtn = document.getElementById('loginBtn');
+                if (!loginBtn.disabled) {
+                    loginBtn.click();
+                }
+            }
+        });
+
+        // 检查URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            showError('用户名或密码错误');
+        }
+        if (urlParams.has('logout')) {
+            // 可以显示退出成功消息
+        }
+    });
+
+    // 输入框实时验证
+    document.getElementById('username').addEventListener('input', function() {
+        validateInput(this);
+    });
+
+    document.getElementById('password').addEventListener('input', function() {
+        validateInput(this);
+    });
+
+    function validateInput(input) {
+        if (input.value.trim()) {
+            input.style.borderColor = '#4CAF50';
+            setTimeout(() => {
+                input.style.borderColor = '#e0e0e0';
+            }, 1000);
+        }
+    }
+</script>
+</body>
+</html>

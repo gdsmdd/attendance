@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>编辑学生 - 二维码签到系统</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <style>
+    .sidebar {
+      min-height: 100vh;
+      background: #2c3e50;
+      color: white;
+    }
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      padding: 10px 15px;
+      display: block;
+      border-left: 3px solid transparent;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      background: #34495e;
+      border-left-color: #3498db;
+    }
+    .main-content {
+      padding: 20px;
+      background: #f8f9fa;
+      min-height: 100vh;
+    }
+    .form-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .student-info-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .student-id {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .student-name {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+    .status-badge {
+      font-size: 0.9rem;
+      padding: 5px 15px;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body>
+<div class="container-fluid">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <div class="col-md-2 p-0 sidebar">
+      <div class="p-3">
+        <h4 class="text-center mb-4">
+          <i class="bi bi-qr-code"></i> 签到系统
+        </h4>
+        <div class="user-info text-center mb-4">
+          <i class="bi bi-shield-lock fs-2 mb-2"></i>
+          <h6>管理员</h6>
+          <p class="mb-1" th:text="${admin.name}">系统管理员</p>
+          <small th:text="${admin.username}">admin</small>
+        </div>
+
+        <nav class="nav flex-column">
+          <a th:href="@{/admin/dashboard}" class="nav-link">
+            <i class="bi bi-speedometer2"></i> 仪表板
+          </a>
+          <a th:href="@{/admin/teachers}" class="nav-link">
+            <i class="bi bi-person-badge"></i> 教师管理
+          </a>
+          <a th:href="@{/admin/students}" class="nav-link active">
+            <i class="bi bi-people"></i> 学生管理
+          </a>
+          <a th:href="@{/admin/departments}" class="nav-link">
+            <i class="bi bi-building"></i> 院系管理
+          </a>
+          <div class="mt-4">
+            <a th:href="@{/logout}" class="nav-link text-danger">
+              <i class="bi bi-box-arrow-right"></i> 退出登录
+            </a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="col-md-10 main-content">
+      <!-- 页面标题和操作按钮 -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="bi bi-pencil"></i> 编辑学生信息</h3>
+        <div>
+          <a th:href="@{/admin/students}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+          </a>
+        </div>
+      </div>
+
+      <!-- 学生基本信息卡片 -->
+      <div class="student-info-card">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <div class="student-name" th:text="${student.name}">张三</div>
+            <div class="mt-2">
+              <span class="student-id" th:text="'学号：' + ${student.studentId}">学号：20231001</span>
+            </div>
+          </div>
+          <div class="col-md-6 text-end">
+            <div class="mb-2">
+              <span th:if="${student.status == 'ACTIVE'}" class="badge bg-success">正常</span>
+              <span th:if="${student.status == 'INACTIVE'}" class="badge bg-danger">停用</span>
+              <span th:if="${student.status == 'GRADUATED'}" class="badge bg-secondary">已毕业</span>
+            </div>
+            <div class="mt-2">
+              <small>创建时间：<span th:text="${#temporals.format(student.createTime, 'yyyy-MM-dd')}">2023-01-01</span></small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 消息提示 -->
+      <div th:if="${error}" class="alert alert-danger">
+        <i class="bi bi-exclamation-circle"></i>
+        <span th:text="${error}"></span>
+      </div>
+
+      <!-- 编辑学生表单 -->
+      <div class="card form-container">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-pencil"></i> 编辑信息</h5>
+        </div>
+        <div class="card-body">
+          <form th:action="@{/admin/students/update}" method="post" id="studentEditForm">
+            <input type="hidden" name="id" th:value="${student.id}">
+
+            <div class="row">
+              <!-- 基本信息 -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="studentId" class="form-label">学号</label>
+                  <input type="text" class="form-control" id="studentId" name="studentId"
+                         th:value="${student.studentId}" required readonly>
+                  <div class="form-text">学号不可修改</div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="name" class="form-label">姓名</label>
+                  <input type="text" class="form-control" id="name" name="name"
+                         th:value="${student.name}" required>
+                </div>
+
+                <div class="mb-3">
+                  <label for="username" class="form-label">用户名</label>
+                  <input type="text" class="form-control" id="username" name="username"
+                         th:value="${student.username}" required>
+                  <div class="form-text">用户名用于登录系统，不可重复</div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="className" class="form-label">行政班级</label>
+                  <input type="text" class="form-control" id="className" name="className"
+                         th:value="${student.className}" required>
+                  <div class="form-text">格式：入学年份+专业+班级</div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="enrollmentYear" class="form-label">入学年份</label>
+                  <select class="form-select" id="enrollmentYear" name="enrollmentYear" required>
+                    <option value="">请选择入学年份</option>
+                    <!-- 用 #numbers.sequence 生成序列，遍历多个年份 -->
+                    <option
+                            th:with="currentYear = ${#temporals.createNow().year}"
+                            th:each="offset : ${#numbers.sequence(-4, 0)}"
+                            th:value="${currentYear + offset}"
+                            th:text="${currentYear + offset}">
+                      2023
+                    </option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label for="departmentId" class="form-label">所属院系</label>
+                  <select class="form-select" id="departmentId" name="departmentId" required>
+                    <option value="">请选择院系</option>
+                    <option th:each="dept : ${departments}"
+                            th:value="${dept.id}"
+                            th:text="${dept.name}"
+                            th:selected="${student.department.id == dept.id}">
+                      计算机学院
+                    </option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">账号状态</label>
+                  <div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="status"
+                             id="statusActive" value="ACTIVE"
+                             th:checked="${student.status == 'ACTIVE'}">
+                      <label class="form-check-label" for="statusActive">
+                        <i class="bi bi-check-circle text-success"></i> 启用
+                      </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="status"
+                             id="statusInactive" value="INACTIVE"
+                             th:checked="${student.status == 'INACTIVE'}">
+                      <label class="form-check-label" for="statusInactive">
+                        <i class="bi bi-x-circle text-danger"></i> 停用
+                      </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="status"
+                             id="statusGraduated" value="GRADUATED"
+                             th:checked="${student.status == 'GRADUATED'}">
+                      <label class="form-check-label" for="statusGraduated">
+                        <i class="bi bi-mortarboard text-secondary"></i> 已毕业
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 备注信息 -->
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="note" class="form-label">备注</label>
+                  <textarea class="form-control" id="note" name="note" rows="3"
+                            placeholder="可在此添加备注信息（选填）"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- 密码重置 -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-key"></i> 密码管理</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check mb-2">
+                      <input class="form-check-input" type="checkbox" id="resetPassword">
+                      <label class="form-check-label" for="resetPassword">
+                        重置密码
+                      </label>
+                    </div>
+                    <div id="passwordFields" style="display: none;">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="newPassword" class="form-label">新密码</label>
+                            <input type="password" class="form-control" id="newPassword"
+                                   name="newPassword" placeholder="请输入新密码">
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="confirmNewPassword" class="form-label">确认新密码</label>
+                            <input type="password" class="form-control" id="confirmNewPassword"
+                                   placeholder="请再次输入新密码">
+                            <div class="invalid-feedback" id="newPasswordError">两次输入的密码不一致</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 表单操作按钮 -->
+            <div class="row">
+              <div class="col-12">
+                <hr>
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <a th:href="@{/admin/students/delete/{id}(id=${student.id})}"
+                       class="btn btn-danger"
+                       onclick="return confirm('确定要删除该学生吗？此操作不可恢复！')">
+                      <i class="bi bi-trash"></i> 删除学生
+                    </a>
+                  </div>
+                  <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="goBack()">
+                      取消
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                      <i class="bi bi-save"></i> 保存修改
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // 显示/隐藏密码重置字段
+  $('#resetPassword').change(function() {
+    if ($(this).is(':checked')) {
+      $('#passwordFields').show();
+      $('#newPassword').prop('required', true);
+      $('#confirmNewPassword').prop('required', true);
+    } else {
+      $('#passwordFields').hide();
+      $('#newPassword').prop('required', false);
+      $('#confirmNewPassword').prop('required', false);
+      $('#newPassword').val('');
+      $('#confirmNewPassword').val('');
+    }
+  });
+
+  // 密码验证
+  $('#confirmNewPassword').on('input', function() {
+    const newPassword = $('#newPassword').val();
+    const confirmNewPassword = $(this).val();
+    const errorDiv = $('#newPasswordError');
+
+    if (confirmNewPassword && newPassword !== confirmNewPassword) {
+      $(this).addClass('is-invalid');
+      errorDiv.show();
+    } else {
+      $(this).removeClass('is-invalid');
+      errorDiv.hide();
+    }
+  });
+
+  // 表单验证
+  $('#studentEditForm').submit(function(e) {
+    e.preventDefault();
+
+    // 验证必填项
+    let isValid = true;
+    $('input[required], select[required]').each(function() {
+      if (!$(this).val()) {
+        $(this).addClass('is-invalid');
+        isValid = false;
+      } else {
+        $(this).removeClass('is-invalid');
+      }
+    });
+
+    // 验证新密码
+    if ($('#resetPassword').is(':checked')) {
+      const newPassword = $('#newPassword').val();
+      const confirmNewPassword = $('#confirmNewPassword').val();
+      if (newPassword !== confirmNewPassword) {
+        $('#confirmNewPassword').addClass('is-invalid');
+        $('#newPasswordError').show();
+        isValid = false;
+      }
+
+      // 验证密码长度
+      if (newPassword && newPassword.length < 6) {
+        $('#newPassword').addClass('is-invalid');
+        $('#newPassword').next('.invalid-feedback').remove();
+        $('<div class="invalid-feedback">密码长度至少6位</div>').insertAfter('#newPassword');
+        isValid = false;
+      }
+    }
+
+    // 验证用户名格式
+    const username = $('#username').val();
+    if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
+      $('#username').addClass('is-invalid');
+      $('#username').next('.form-text').addClass('text-danger');
+      $('#username').next('.form-text').text('用户名只能包含字母、数字和下划线');
+      isValid = false;
+    }
+
+    if (isValid) {
+      // 显示加载状态
+      const submitBtn = $('#submitBtn');
+      submitBtn.prop('disabled', true);
+      submitBtn.html('<i class="bi bi-hourglass-split"></i> 保存中...');
+
+      // 提交表单
+      setTimeout(() => {
+        this.submit();
+      }, 500);
+    } else {
+      // 滚动到第一个错误位置
+      $('html, body').animate({
+        scrollTop: $('.is-invalid').first().offset().top - 100
+      }, 500);
+    }
+  });
+
+  // 输入框实时验证
+  $('input, select').on('input change', function() {
+    if ($(this).hasClass('is-invalid')) {
+      $(this).removeClass('is-invalid');
+      if ($(this).attr('id') === 'username') {
+        $(this).next('.form-text').removeClass('text-danger');
+        $(this).next('.form-text').text('用户名用于登录系统，不可重复');
+      }
+    }
+  });
+
+  // 返回列表
+  function goBack() {
+    if ($('#studentEditForm')[0].checkValidity()) {
+      if (confirm('确定要取消吗？已修改的内容将不会被保存。')) {
+        window.location.href = 'admin/students';
+      }
+    } else {
+      window.location.href = 'admin/students';
+    }
+  }
+
+  // 页面加载时自动生成入学年份选项
+  $(document).ready(function() {
+    const yearSelect = $('#enrollmentYear');
+    if (yearSelect.children().length <= 1) {
+      const currentYear = new Date().getFullYear();
+      for (let i = 0; i <= 4; i++) {
+        const year = currentYear - i;
+        yearSelect.append(`<option value="${year}">${year}</option>`);
+      }
+      // 设置当前学生的入学年份
+      const studentYear = yearSelect.data('selected');
+      if (studentYear) {
+        yearSelect.val(studentYear);
+      }
+    }
+
+    // 自动关闭警告框
+    setTimeout(function() {
+      $('.alert').alert('close');
+    }, 5000);
+  });
+</script>
+</body>
+</html>

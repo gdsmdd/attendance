@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑教学班 - 二维码签到系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background: #2c3e50; color: white; }
+        .sidebar a { color: white; text-decoration: none; padding: 10px 15px; display: block; border-left: 3px solid transparent; }
+        .sidebar a:hover, .sidebar a.active { background: #34495e; border-left-color: #3498db; }
+        .main-content { padding: 20px; background: #f8f9fa; min-height: 100vh; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 p-0 sidebar">
+            <div class="p-3">
+                <h4 class="text-center mb-4"><i class="bi bi-qr-code"></i> 签到系统</h4>
+                <div class="user-info text-center mb-4">
+                    <i class="bi bi-person-circle fs-2 mb-2"></i>
+                    <h6>教师</h6>
+                    <p class="mb-1" th:text="${teacher.name}">张老师</p>
+                    <small th:text="${teacher.username}">teacher1</small>
+                </div>
+
+                <nav class="nav flex-column">
+                    <a th:href="@{/teacher/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> 仪表板</a>
+                    <a th:href="@{/teacher/teaching-classes}" class="nav-link active"><i class="bi bi-people"></i> 教学班管理</a>
+                    <a th:href="@{/teacher/attendance/sessions}" class="nav-link"><i class="bi bi-check-circle"></i> 签到管理</a>
+                    <div class="mt-4">
+                        <a th:href="@{/logout}" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4><i class="bi bi-pencil-square text-primary me-2"></i>编辑教学班</h4>
+                    <p class="text-muted mb-0">当前教学班：<span class="fw-bold" th:text="${teachingClass.className}"></span></p>
+                </div>
+                <a th:href="@{/teacher/teaching-classes}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+
+            <!-- 消息提示 -->
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form th:action="@{/teacher/teaching-classes/update}" method="post">
+                        <input type="hidden" name="id" th:value="${teachingClass.id}">
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">教学班名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="className" required
+                                           th:value="${teachingClass.className}"
+                                           placeholder="例如：Java程序设计-2024春">
+                                    <div class="form-text">请填写唯一的教学班名称</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">课程名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="courseName" required
+                                           th:value="${teachingClass.courseName}"
+                                           placeholder="例如：Java程序设计">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">学期</label>
+                                    <input type="text" class="form-control" name="semester"
+                                           th:value="${teachingClass.semester}"
+                                           placeholder="例如：2024春">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">状态</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               name="isActive" value="true"
+                                               th:checked="${teachingClass.isActive}">
+                                        <label class="form-check-label">
+                      <span th:if="${teachingClass.isActive}" class="text-success">
+                        <i class="bi bi-check-circle"></i> 活跃
+                      </span>
+                                            <span th:unless="${teachingClass.isActive}" class="text-secondary">
+                        <i class="bi bi-x-circle"></i> 已停用
+                      </span>
+                                        </label>
+                                    </div>
+                                    <div class="form-text">未激活的教学班将不能用于签到</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">创建时间</label>
+                                    <input type="text" class="form-control"
+                                           th:value="${#temporals.format(teachingClass.createTime, 'yyyy-MM-dd HH:mm:ss')}"
+                                           readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">更新时间</label>
+                                    <input type="text" class="form-control"
+                                           th:value="${#temporals.format(teachingClass.updateTime, 'yyyy-MM-dd HH:mm:ss')}"
+                                           th:if="${teachingClass.updateTime != null}"
+                                           th:unless="${teachingClass.updateTime == null}" value="暂无更新"
+                                           readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 保存修改
+                            </button>
+                            <a th:href="@{/teacher/teaching-classes/{id}/students(id=${teachingClass.id})}"
+                               class="btn btn-info">
+                                <i class="bi bi-people"></i> 管理学生
+                            </a>
+                            <a th:href="@{/teacher/teaching-classes}" class="btn btn-secondary">取消</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 危险操作区域 -->
+            <div class="card border-danger mt-4">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-exclamation-triangle me-2"></i>危险操作
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title text-danger">删除教学班</h6>
+                    <p class="card-text text-muted">
+                        删除教学班将同时删除该教学班的所有签到记录。此操作不可恢复，请谨慎操作。
+                    </p>
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        注意：只有教学班中没有学生时才能删除。
+                    </div>
+                    <a th:href="@{/teacher/teaching-classes/delete/{id}(id=${teachingClass.id})}"
+                       class="btn btn-danger"
+                       onclick="return confirm('确定要删除这个教学班吗？删除后将无法恢复！')">
+                        <i class="bi bi-trash"></i> 删除教学班
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 表单提交前的验证
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const className = document.querySelector('input[name="className"]').value.trim();
+        const courseName = document.querySelector('input[name="courseName"]').value.trim();
+
+        if (!className || !courseName) {
+            e.preventDefault();
+            alert('请填写必填字段！');
+            return false;
+        }
+
+        if (!confirm('确定要保存修改吗？')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>[[${attendanceSession?.title ?: '签到详情'}]]</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+<!-- 1. 页面标题 -->
+<h2 class="mb-4" th:text="${attendanceSession?.title ?: '签到详情'}">签到详情</h2>
+
+<!-- 2. 统计信息 -->
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title">签到统计</h5>
+    <p class="card-text">总学生数：<span th:text="${totalStudentCount ?: 0}">0</span></p>
+    <p class="card-text">正常签到：<span th:text="${signInCount ?: 0}">0</span></p>
+    <p class="card-text">迟到人数：<span th:text="${lateCount ?: 0}">0</span></p>
+    <p class="card-text">缺勤人数：<span th:text="${absentCount ?: 0}">0</span></p>
+  </div>
+</div>
+
+<!-- 4. 签到记录列表 -->
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">签到记录</h5>
+    <table class="table table-striped">
+      <thead>
+      <tr>
+        <th>学生姓名</th>
+        <th>签到状态</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="record : ${signInRecords ?: #lists.emptyList()}">
+        <td th:text="${record.student?.name ?: '未知'}">张三</td>
+        <td th:text="${record.status == 'PRESENT' ? '正常' : (record.status == 'LATE' ? '迟到' : '异常')}">正常</td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(signInRecords)}">
+        <td colspan="3" class="text-center">暂无签到记录</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 5. 二维码模态框 -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="qrModalTitle">二维码</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="qrCodeContainer" style="width: 256px; margin: 0 auto;"></div>
+        <p class="mt-2" id="qrInfo"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. 纯JS（放在页面底部，无任何Thymeleaf内联） -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script>
+  // 全局变量：从DOM获取sessionId（避免Thymeleaf内联）
+  const sessionId = /*[[${attendanceSession?.id ?: 0}]]*/ 0;
+
+  // 页面加载完成后绑定事件（避免DOM未加载）
+  document.addEventListener('DOMContentLoaded', function() {
+    // 绑定二维码按钮事件
+    const qrBtn = document.getElementById('qrCodeBtn');
+    if (qrBtn) {
+      qrBtn.addEventListener('click', function() {
+        const className = this.dataset.className || '未关联班级';
+        const title = this.dataset.title || '无标题';
+        const code = this.dataset.code || '';
+        const start = this.dataset.start || '未设置';
+        const end = this.dataset.end || '未设置';
+
+        // 生成二维码
+        const qrContent = `${window.location.origin}/student/sign-in?code=${code}`;
+        QRCode.toCanvas(document.getElementById('qrCodeContainer'), qrContent, {
+          width: 256,
+          margin: 1
+        }, function(error) {
+          if (error) console.error('生成二维码失败：', error);
+        });
+
+        // 更新模态框内容
+        document.getElementById('qrModalTitle').textContent = `${className} - ${title}`;
+        document.getElementById('qrInfo').textContent = `签到码：${code} | 时间：${start} 至 ${end}`;
+
+        // 显示模态框
+        new bootstrap.Modal(document.getElementById('qrModal')).show();
+      });
+    }
+
+  });
+</script>
+</body>
+</html>

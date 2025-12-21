@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加学生 - 二维码签到系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background: #2c3e50; color: white; }
+        .sidebar a { color: white; text-decoration: none; padding: 10px 15px; display: block; border-left: 3px solid transparent; }
+        .sidebar a:hover, .sidebar a.active { background: #34495e; border-left-color: #3498db; }
+        .main-content { padding: 20px; background: #f8f9fa; min-height: 100vh; }
+        .student-card { transition: all 0.3s; cursor: pointer; }
+        .student-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .student-card.selected { border-color: #0d6efd; background-color: #e7f1ff; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 p-0 sidebar">
+            <div class="p-3">
+                <h4 class="text-center mb-4"><i class="bi bi-qr-code"></i> 签到系统</h4>
+                <div class="user-info text-center mb-4">
+                    <i class="bi bi-person-circle fs-2 mb-2"></i>
+                    <h6>教师</h6>
+                    <p class="mb-1" th:text="${teacher.name}">张老师</p>
+                    <small th:text="${teacher.username}">teacher1</small>
+                </div>
+
+                <nav class="nav flex-column">
+                    <a th:href="@{/teacher/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> 仪表板</a>
+                    <a th:href="@{/teacher/teaching-classes}" class="nav-link active"><i class="bi bi-people"></i> 教学班管理</a>
+                    <a th:href="@{/teacher/attendance/sessions}" class="nav-link"><i class="bi bi-check-circle"></i> 签到管理</a>
+                    <div class="mt-4">
+                        <a th:href="@{/logout}" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4><i class="bi bi-person-plus text-primary me-2"></i>添加学生到教学班</h4>
+                    <p class="text-muted mb-0">
+                        教学班：<span class="fw-bold" th:text="${teachingClass.className}"></span>
+                        ([[${teachingClass.courseName}]])
+                    </p>
+                </div>
+                <div>
+                    <a th:href="@{/teacher/teaching-classes/{id}/students(id=${teachingClass.id})}"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 返回学生列表
+                    </a>
+                </div>
+            </div>
+
+            <!-- 消息提示 -->
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- 搜索表单 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">搜索学生</h6>
+                    <form method="get" th:action="@{/teacher/teaching-classes/{id}/students/add(id=${teachingClass.id})}">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" name="keyword"
+                                           th:value="${keyword}"
+                                           placeholder="请输入学号、姓名或班级进行搜索">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-search me-2"></i>搜索
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            提示：您可以搜索学号、姓名或班级名称来查找学生
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 批量添加表单 -->
+            <form th:action="@{/teacher/teaching-classes/{classId}/students/add(classId=${teachingClass.id})}"
+                  method="post" id="addStudentsForm">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="bi bi-person-check me-2"></i>
+                            选择学生添加到教学班
+                            <span class="badge bg-primary ms-2" id="selectedCount">0</span>
+                        </h6>
+                        <button type="submit" class="btn btn-success" id="addStudentsBtn" disabled>
+                            <i class="bi bi-person-plus me-2"></i> 添加选中学生
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(availableStudents)}" class="text-center py-5">
+                            <i class="bi bi-person-x fs-1 text-muted mb-3"></i>
+                            <h5 class="text-muted">没有找到可添加的学生</h5>
+                            <p class="text-muted">
+                                <span th:if="${keyword}">未找到匹配"[[${keyword}]]"的学生</span>
+                                <span th:unless="${keyword}">所有学生都已添加到该教学班</span>
+                            </p>
+                        </div>
+
+                        <div class="row" th:unless="${#lists.isEmpty(availableStudents)}">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                    <label class="form-check-label" for="selectAll">
+                                        全选/取消全选
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div th:each="student : ${availableStudents}" class="col-md-6 col-lg-4 mb-3">
+                                <div class="card student-card">
+                                    <div class="card-body">
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input student-checkbox" type="checkbox"
+                                                   name="studentId" th:value="${student.id}"
+                                                   th:id="'student_' + ${student.id}">
+                                            <label class="form-check-label d-block"
+                                                   th:for="'student_' + ${student.id}">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="bi bi-person-circle fs-4 text-primary me-3"></i>
+                                                    <div>
+                                                        <h6 class="mb-0" th:text="${student.name}">学生姓名</h6>
+                                                        <small class="text-muted" th:text="${student.studentId}">学号</small>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-2">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted">班级:</span>
+                                                        <span th:text="${student.className}">班级</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted">院部:</span>
+                                                        <span th:text="${student.department ?: '未设置'}">院部</span>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 学生统计 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title mb-3"><i class="bi bi-bar-chart me-2"></i>学生统计</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary text-white rounded-circle p-3 me-3">
+                                    <i class="bi bi-people fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0" th:text="${#lists.size(availableStudents)}">0</h5>
+                                    <small class="text-muted">可添加学生数</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                提示：勾选学生后点击"添加选中学生"按钮，即可将学生添加到教学班。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // 全选/取消全选
+        $('#selectAll').change(function() {
+            const isChecked = $(this).prop('checked');
+            $('.student-checkbox').prop('checked', isChecked);
+            updateSelectedCount();
+        });
+
+        // 单个复选框变化
+        $('.student-checkbox').change(function() {
+            updateSelectedCount();
+        });
+
+        // 卡片点击选中
+        $('.student-card').click(function(e) {
+            if (!$(e.target).is('input') && !$(e.target).is('label')) {
+                const checkbox = $(this).find('.student-checkbox');
+                checkbox.prop('checked', !checkbox.prop('checked'));
+                updateSelectedCount();
+            }
+        });
+
+        // 表单提交
+        $('#addStudentsForm').submit(function(e) {
+            const selectedCount = $('.student-checkbox:checked').length;
+            if (selectedCount === 0) {
+                e.preventDefault();
+                alert('请至少选择一个学生！');
+                return false;
+            }
+
+            if (!confirm('确定要将选中的 ' + selectedCount + ' 个学生添加到教学班吗？')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // 更新选中数量
+        function updateSelectedCount() {
+            const selectedCount = $('.student-checkbox:checked').length;
+            $('#selectedCount').text(selectedCount);
+
+            if (selectedCount > 0) {
+                $('#addStudentsBtn').prop('disabled', false);
+            } else {
+                $('#addStudentsBtn').prop('disabled', true);
+            }
+
+            // 更新全选框状态
+            const totalCheckboxes = $('.student-checkbox').length;
+            $('#selectAll').prop('checked', selectedCount === totalCheckboxes && totalCheckboxes > 0);
+
+            // 添加/移除选中样式
+            $('.student-checkbox').each(function() {
+                const card = $(this).closest('.student-card');
+                if ($(this).prop('checked')) {
+                    card.addClass('selected');
+                } else {
+                    card.removeClass('selected');
+                }
+            });
+        }
+
+        // 初始更新
+        updateSelectedCount();
+    });
+</script>
+</body>
+</html>

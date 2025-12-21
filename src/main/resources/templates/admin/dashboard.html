@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员仪表板 - 二维码签到系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: #2c3e50;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: block;
+            border-left: 3px solid transparent;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background: #34495e;
+            border-left-color: #3498db;
+        }
+        .sidebar .nav-item {
+            margin: 5px 0;
+        }
+        .stat-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-card.teacher {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-card.student {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stat-card.department {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stat-card i {
+            font-size: 40px;
+            opacity: 0.8;
+        }
+        .main-content {
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 p-0 sidebar">
+            <div class="p-3">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-qrcode"></i> 签到系统
+                </h4>
+                <div class="user-info text-center mb-4">
+                    <i class="fas fa-user-shield fa-2x mb-2"></i>
+                    <h6>管理员</h6>
+                    <p class="mb-1" th:text="${admin.name}">系统管理员</p>
+                    <small th:text="${admin.username}">admin</small>
+                </div>
+
+                <nav class="nav flex-column">
+                    <a th:href="@{/admin/dashboard}" class="nav-link active">
+                        <i class="fas fa-tachometer-alt"></i> 仪表板
+                    </a>
+                    <a th:href="@{/admin/teachers}" class="nav-link active">
+                        <i class="fas fa-chalkboard-teacher"></i> 教师管理
+                    </a>
+                    <a th:href="@{/admin/students}" class="nav-link active">
+                        <i class="fas fa-user-graduate"></i> 学生管理
+                    </a>
+                    <a th:href="@{/admin/departments}" class="nav-link active">
+                        <i class="fas fa-university"></i> 院系管理
+                    </a>
+                    <div class="mt-4">
+                        <a th:href="@{/logout}" class="nav-link active">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3><i class="fas fa-tachometer-alt"></i> 管理员仪表板</h3>
+                <div class="text-muted">
+                    <i class="fas fa-calendar"></i>
+                    <span id="current-time"></span>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="stat-card teacher">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h2 th:text="${teacherCount}">0</h2>
+                                <p>教师数量</p>
+                            </div>
+                            <div>
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </div>
+                        </div>
+                        <a th:href="@{/admin/teachers}" class="text-white d-block mt-2">
+                            <i class="fas fa-arrow-right"></i> 查看教师
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="stat-card student">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h2 th:text="${studentCount}">0</h2>
+                                <p>学生数量</p>
+                            </div>
+                            <div>
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                        </div>
+                        <a th:href="@{/admin/students}" class="text-white d-block mt-2">
+                            <i class="fas fa-arrow-right"></i> 查看学生
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="stat-card department">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h2 th:text="${departmentCount}">0</h2>
+                                <p>院系数量</p>
+                            </div>
+                            <div>
+                                <i class="fas fa-university"></i>
+                            </div>
+                        </div>
+                        <a th:href="@{/admin/departments}" class="text-white d-block mt-2">
+                            <i class="fas fa-arrow-right"></i> 查看院系
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统信息 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> 系统信息</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>使用说明：</h6>
+                            <ul>
+                                <li>教师管理：添加、编辑、删除教师账号</li>
+                                <li>学生管理：添加、编辑、删除学生账号</li>
+                                <li>院系管理：查看已添加的院系信息</li>
+                                <li>注意：院系数据需在数据库手动添加</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>快速操作：</h6>
+                            <div class="d-grid gap-2">
+                                <a th:href="@{/admin/teachers/add}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> 添加新教师
+                                </a>
+                                <a th:href="@{/admin/students/add}" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> 添加新学生
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 显示当前时间
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        document.getElementById('current-time').textContent = timeString;
+    }
+
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // 页面加载动画
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.stat-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s, transform 0.5s';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
+</body>
+</html>
