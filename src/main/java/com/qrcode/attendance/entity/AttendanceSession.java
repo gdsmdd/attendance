@@ -29,7 +29,6 @@ public class AttendanceSession {
     private LocalDateTime endTime; // 签到结束时间
 
     @Column(name = "qr_code_url", columnDefinition = "TEXT") // TEXT 类型可存大量文本（MySQL 中约 65535 字符）
-    // 或用 VARCHAR(20000)（若数据库支持）：@Column(name = "qr_code_url", length = 20000)
     private String qrCodeUrl;
 
     @Column(name = "attendance_code", length = 20)
