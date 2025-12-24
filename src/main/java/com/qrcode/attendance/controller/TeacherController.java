@@ -637,7 +637,7 @@ public class TeacherController {
             model.addAttribute("attendanceSession", attendanceSession); // 主对象
             model.addAttribute("qrCodeBase64", qrCodeBase64); // 纯Base64（前端拼前缀）
             model.addAttribute("qrCodeUrl", "data:image/png;base64," + qrCodeBase64); // 可直接渲染的URL
-            model.addAttribute("attendanceUrl", attendanceUrl); // 签到链接（前端JS生成二维码用）
+            model.addAttribute("attendanceUrl", attendanceUrl); // 签到链接
             model.addAttribute("attendanceCode", attendanceCode);
 
             return "teacher/attendance-qr-code";

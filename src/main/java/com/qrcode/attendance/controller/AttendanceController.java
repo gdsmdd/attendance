@@ -62,7 +62,7 @@ public class AttendanceController {
             model.addAttribute("error", "签到链接无效或已过期");
             // 异常时也可返回签到页面，统一提示
             // return "attendance/signin";
-            return "attendance/error";
+            return "attendance/signin";
         }
     }
 

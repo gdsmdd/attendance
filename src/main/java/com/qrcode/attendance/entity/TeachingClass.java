@@ -3,8 +3,6 @@ package com.qrcode.attendance.entity;
 import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "teaching_classes")
